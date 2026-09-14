@@ -1,25 +1,2 @@
-FROM python:3.11-slim
-
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    libsndfile1 \
-    espeak-ng \
-    cmake \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-RUN pip install --no-cache-dir \
-    flask \
-    kokoro \
-    soundfile \
-    numpy \
-    fugashi && \
-    pip install --no-cache-dir pyopenjtalk
-
-COPY app.py .
-
-EXPOSE 8080
-
-CMD ["python", "app.py"]
+FROM ghcr.io/remsky/kokoro-fastapi-cpu:latest
+EXPOSE 8880
