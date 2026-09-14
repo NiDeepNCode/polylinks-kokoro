@@ -2,3 +2,4 @@ flask
 kokoro
 soundfile
 numpy
+pyopenjtalk
