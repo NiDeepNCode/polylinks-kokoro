@@ -1,6 +1,4 @@
-cat > requirements.txt << 'EOF'
 flask
 kokoro
 soundfile
 numpy
-EOF
