@@ -12,7 +12,8 @@ RUN pip install --no-cache-dir \
     flask \
     kokoro \
     soundfile \
-    numpy
+    numpy && \
+    pip install --no-cache-dir pyopenjtalk
 
 COPY app.py .
 
