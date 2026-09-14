@@ -14,7 +14,8 @@ RUN pip install --no-cache-dir \
     flask \
     kokoro \
     soundfile \
-    numpy && \
+    numpy \
+    fugashi && \
     pip install --no-cache-dir pyopenjtalk
 
 COPY app.py .
