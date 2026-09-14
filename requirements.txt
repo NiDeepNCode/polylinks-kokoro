@@ -3,3 +3,4 @@ kokoro
 soundfile
 numpy
 pyopenjtalk
+fugashi
