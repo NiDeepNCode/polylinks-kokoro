@@ -12,48 +12,60 @@ app = Flask(__name__)
 
 SECRET = os.environ.get("PROXY_SECRET", "")
 
-# Load model once at startup
-print("[KOKORO] Loading model...")
-_pipelines = {
-    "ja": KPipeline(lang_code="j"),
-    "zh": KPipeline(lang_code="z"),
-    "ko": KPipeline(lang_code="k"),
-    "fr": KPipeline(lang_code="f"),
-    "es": KPipeline(lang_code="e"),
-    "pt": KPipeline(lang_code="p"),
-    "de": KPipeline(lang_code="d"),
-    "it": KPipeline(lang_code="i"),
-    "en": KPipeline(lang_code="a"),
+# Supported Kokoro language codes only
+SUPPORTED_LANGUAGES = {
+    "en": "a",  # American English
+    "fr": "f",  # French
+    "es": "e",  # Spanish
+    "it": "i",  # Italian
+    "pt": "p",  # Brazilian Portuguese
+    "ja": "j",  # Japanese
+    "zh": "z",  # Mandarin Chinese
+    "cmn": "z", # Mandarin Chinese (alternate code)
 }
-print("[KOKORO] Model ready.")
 
-# Job store and cache
+VOICE_MAP = {
+    "en": "af_heart",
+    "fr": "ff_siwis",
+    "es": "ef_dora",
+    "it": "if_sara",
+    "pt": "pf_dora",
+    "ja": "jf_alpha",
+    "zh": "zf_xiaobei",
+    "cmn": "zf_xiaobei",
+}
+
+print("[KOKORO] Loading pipelines...")
+_pipelines = {}
+for lang, code in SUPPORTED_LANGUAGES.items():
+    if code not in [p for p in _pipelines.values()]:
+        try:
+            _pipelines[code] = KPipeline(lang_code=code)
+            print(f"[KOKORO] Pipeline loaded for lang_code='{code}'")
+        except Exception as e:
+            print(f"[KOKORO ERROR] Failed to load pipeline for lang_code='{code}': {e}")
+print("[KOKORO] All pipelines ready.")
+
 _jobs = {}
 _cache = {}
 _inference_lock = threading.Semaphore(1)
 
-VOICE_MAP = {
-    "ja": "jf_alpha",
-    "zh": "zf_xiaobei",
-    "cmn": "zf_xiaobei",
-    "ko": "kf_alpha",
-    "fr": "ff_siwis",
-    "es": "ef_dora",
-    "pt": "pf_dora",
-    "de": "df_hedda",
-    "it": "if_sara",
-    "en": "af_heart",
-}
 
-
-def get_voice(language_code):
-    lang = language_code.split("-")[0].lower()
-    return VOICE_MAP.get(lang, "af_heart")
+def get_lang_key(language_code):
+    return language_code.split("-")[0].lower()
 
 
 def get_pipeline(language_code):
-    lang = language_code.split("-")[0].lower()
-    return _pipelines.get(lang, _pipelines["en"])
+    lang = get_lang_key(language_code)
+    code = SUPPORTED_LANGUAGES.get(lang)
+    if not code:
+        return None
+    return _pipelines.get(code)
+
+
+def get_voice(language_code):
+    lang = get_lang_key(language_code)
+    return VOICE_MAP.get(lang, "af_heart")
 
 
 def cache_key(text, language_code, voice):
@@ -73,6 +85,10 @@ def run_inference(job_id, text, language_code, voice):
 
         try:
             pipeline = get_pipeline(language_code)
+            if pipeline is None:
+                _jobs[job_id] = {"status": "error", "error": f"Unsupported language: {language_code}"}
+                return
+
             generator = pipeline(text, voice=voice, speed=1.0)
             chunks = []
             for _, _, audio in generator:
@@ -103,6 +119,10 @@ def submit_job():
     if not text:
         return jsonify({"error": "Missing text"}), 400
 
+    # Check if language is supported
+    if get_pipeline(language_code) is None:
+        return jsonify({"error": f"Unsupported language: {language_code}"}), 400
+
     voice = get_voice(language_code)
     ck = cache_key(text, language_code, voice)
 
@@ -112,7 +132,11 @@ def submit_job():
     job_id = str(uuid.uuid4())
     _jobs[job_id] = {"status": "pending"}
 
-    thread = threading.Thread(target=run_inference, args=(job_id, text, language_code, voice), daemon=True)
+    thread = threading.Thread(
+        target=run_inference,
+        args=(job_id, text, language_code, voice),
+        daemon=True
+    )
     thread.start()
 
     return jsonify({"status": "pending", "jobId": job_id}), 202

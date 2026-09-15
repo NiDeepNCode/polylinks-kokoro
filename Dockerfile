@@ -1,22 +1,14 @@
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    libsndfile1 \
     espeak-ng \
-    cmake \
-    build-essential \
+    libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir \
-    flask \
-    kokoro \
-    soundfile \
-    numpy \
-    fugashi && \
-    pip install --no-cache-dir pyopenjtalk
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
 

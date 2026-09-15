@@ -1,5 +1,5 @@
 flask
-kokoro
+kokoro>=0.9.4
+misaki[en,ja,zh]>=0.9.4
 soundfile
 numpy
-misaki[ja]
